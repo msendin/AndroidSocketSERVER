@@ -54,6 +54,9 @@ public class Server extends Activity {
 
     private class ServerThread implements Runnable {
 
+        private BufferedReader input;
+        private BufferedWriter output;
+
         public void run() {
             Socket socket = null;
             try {
@@ -62,57 +65,24 @@ public class Server extends Activity {
                 e.printStackTrace();
             }
             while (!Thread.currentThread().isInterrupted()) {
-
                 try {
-
                     socket = serverSocket.accept();
-
-                    CommunicationThread commThread = new CommunicationThread(socket);
-                    new Thread(commThread).start();
-
+                    this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    this.output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                    while (!Thread.currentThread().isInterrupted()) {
+                        try {
+                            String read = input.readLine();
+                            updateConversationHandler.post(new updateUIThread(read));
+                            output.write(read + "\n", 0, read.length() + 1);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
-    }
-
-    private class CommunicationThread implements Runnable {
-
-        private Socket clientSocket;
-
-        private BufferedReader input;
-
-        private CommunicationThread(Socket clientSocket) {
-
-            this.clientSocket = clientSocket;
-
-            try {
-
-                this.input = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()));
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        public void run() {
-
-
-            while (!Thread.currentThread().isInterrupted()) {
-
-                try {
-
-                    String read = input.readLine();
-
-                    updateConversationHandler.post(new updateUIThread(read));
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
     }
 
     private class updateUIThread implements Runnable {
@@ -124,7 +94,8 @@ public class Server extends Activity {
 
         @Override
         public void run() {
-            text.setText(text.getText().toString()+"Client Says: "+ msg + "\n");
+            text.append("ECHOING the message in Server" + "\n");
+            text.append(text.getText().toString()+"Client Says: "+ msg + "\n");
         }
 
     }
